@@ -35,6 +35,16 @@ captures/
 # Intellij
 *.iml
 .idea/workspace.xml
+.idea/libraries
 
 # Keystore files
 *.jks
+
+
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+/.idea/
+/buildSrc/build/
+/buildSrc/.gradle/
