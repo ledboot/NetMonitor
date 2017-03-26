@@ -21,37 +21,35 @@ class MonitorInjector {
         if (file.path.endsWith(".class")
                 && !isExcluded(file.path, excludeClasses)) {
             realInject(file)
-        } else if (file.path.endsWith("classes.jar")) {
+        } else if (file.path.endsWith(".jar")) {
             println "find jar: ${file.path}"
             if (checkInjection(file, modules)) {
                 println "inject jar: ${file.path}"
-//                realInject(file)
-            }
-        } else if (file.absolutePath.contains("com.squareup.okhttp3")) {
-            println "find jar: ${file.path}"
-            if (checkInjection(file, modules)) {
-                println "inject jar: ${file.path}"
-//                realInject(file)
+                realInject(file)
             }
         }
     }
 
     public static boolean checkInjection(File file, Collection<String> modules) {
-        println(TAG + " " + file.absolutePath)
+        println(TAG + "checkInjection: " + file.absolutePath)
 //        return (file.absolutePath.contains("intermediates" + File.separator + "exploded-aar" + File.separator)
 //                    && !file.absolutePath.contains("com.antfortune.freeline")
 //                    && !file.absolutePath.contains("com.android.support")
 //                    && file.absolutePath.contains("com.squareup.okhttp3")
 //                    && isProjectModuleJar(file.absolutePath, modules))
-        modules.each {
-            module ->
-                println("module :  " + module)
+//        modules.each {
+//            module ->
+//                println("module :  " + module)
+//        }
+        if (file.absolutePath.contains("intermediates" + File.separator + "exploded-aar" + File.separator)) {
+            return false
+        } else {
+            return true
         }
-        return file.absolutePath.contains("com.squareup.okhttp3")
-/* && isProjectModuleJar(file.absolutePath, modules)*/
+//        return file.absolutePath.contains("com.squareup.okhttp3")
     }
 
-    private static boolean isExcluded(String path, List<String> excludeClasses) {
+    public static boolean isExcluded(String path, List<String> excludeClasses) {
         for (String exclude : excludeClasses) {
             if (!exclude.endsWith(".class")) {
                 exclude = exclude + ".class"
@@ -64,6 +62,20 @@ class MonitorInjector {
         return false
     }
 
+    public static boolean isExcluded(String path) {
+        if (path.endsWith(".class") || path.endsWith(".jar")) {
+            if (path =~ 'R\\$[a-zA-Z]*\\.class' || path.endsWith("R.class")) {
+//                println("isExcluded false ===" + path)
+                return false
+            } else {
+//                println("isExcluded  true ===" + path)
+                return true
+            }
+        }
+        return false
+    }
+
+
     private static boolean isProjectModuleJar(String path, Collection<String> modules) {
         for (String module : modules) {
             if (path.contains(module)) {
@@ -74,9 +86,8 @@ class MonitorInjector {
     }
 
     private static void realInject(File file) {
+        File pending = new File(file.parent, file.name + ".pending")
         try {
-            def pending = new File(file.parent, file.name + ".pending")
-
             if (file.path.endsWith(".class")) {
                 FileInputStream fis = new FileInputStream(file)
                 FileOutputStream fos = new FileOutputStream(pending)
@@ -100,10 +111,10 @@ class MonitorInjector {
                         jos.putNextEntry(zipEntry)
 
                         if (entryName.endsWith(".class")) {
-                            println "inject jar class: ${entryName}"
+//                            println "inject jar class: ${entryName}"
                             jos.write(hackClass(file.path, entryName, true, is))
                         } else {
-                            println "skip jar entry: ${entryName}"
+//                            println "skip jar entry: ${entryName}"
                             jos.write(readBytes(is))
                         }
                     } catch (Exception e) {
@@ -122,9 +133,13 @@ class MonitorInjector {
             if (file.exists()) {
                 file.delete()
             }
-            pending.renameTo(file)
+            def renameSuccess = pending.renameTo(file)
+            println("renameSuccess ==" + renameSuccess)
         } catch (Exception e) {
-            println "inject error: ${file.path}"
+            if (pending.exists()) {
+                pending.delete()
+            }
+            println "inject error: ${file.path},Exception =${e.getMessage()}"
         }
     }
 
