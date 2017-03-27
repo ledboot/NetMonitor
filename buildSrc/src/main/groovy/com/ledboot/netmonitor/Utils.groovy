@@ -41,12 +41,12 @@ class Utils {
         return buildCacheDir.absolutePath
     }
 
-    public static String getBuildBackupDir(String buildDirPath) {
+    public static File getBuildBackupDir(String buildDirPath) {
         def buildBackupDir = new File(getBuildCacheDir(buildDirPath), "monitor-backup")
         if (!buildBackupDir.exists() || !buildBackupDir.isDirectory()) {
             buildBackupDir.mkdirs()
         }
-        return buildBackupDir.absolutePath
+        return buildBackupDir
     }
 
     public static String getAndroidGradlePluginVersion(Project project) {

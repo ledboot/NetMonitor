@@ -28,6 +28,7 @@ class MonitorClassVisitor extends ClassVisitor implements Opcodes {
     @Override
     void visit(int version, int access, String name, String signature, String superName, String[] interfaces) {
         className = name;
+        println("superName="+superName+",name="+name)
         if ("android/app/Application".equals(superName)) {
             isHack = false;
         }
@@ -54,7 +55,7 @@ class MonitorClassVisitor extends ClassVisitor implements Opcodes {
             @Override
             void visitInsn(int opcode) {
                 if (isHack) {
-                    if ("<init>".equals(name) && opcode == RETURN) {
+                    /*if ("<init>".equals(name) && opcode == RETURN) {
                         boolean flag = A.getBol();
                         heads.add();
                         //org.micro.freeline.hackload.ClassVerifier
@@ -66,7 +67,7 @@ class MonitorClassVisitor extends ClassVisitor implements Opcodes {
                         super.visitLdcInsn(Type.getType("Lorg/micro/freeline/hackload/ClassVerifier;"));
                         super.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "print", "(Ljava/lang/Object;)V", false);
                         super.visitLabel(l0);
-                    }
+                    }*/
                 }
                 super.visitInsn(opcode);
             }
@@ -74,12 +75,12 @@ class MonitorClassVisitor extends ClassVisitor implements Opcodes {
             @Override
             void visitMaxs(int i, int i1) {
                 if ("<init>".equals(name)) {
-                    if (isHack) {
+                   /* if (isHack) {
                         super.visitMaxs(i + 2, i1)
                     } else {
                         super.visitMaxs(i, i1)
                     }
-                    return
+                    return*/
                 }
                 super.visitMaxs(i, i1)
             }

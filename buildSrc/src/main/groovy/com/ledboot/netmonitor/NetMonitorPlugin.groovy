@@ -55,12 +55,14 @@ public class NetMonitorPlugin implements Plugin<Project> {
                     }
                 }
 
-                println("classesProcessTask :" + classesProcessTask)
-                println("multiDexListTask :" + multiDexListTask)
+//                println("classesProcessTask :" + classesProcessTask)
+//                println("multiDexListTask :" + multiDexListTask)
                 if (classesProcessTask == null) {
                     return
                 }
-                String backUpDirPath = Utils.getBuildBackupDir(project.buildDir.absolutePath)
+
+                File backUpDir = Utils.getBuildBackupDir(project.buildDir.absolutePath)
+                String backUpDirPath = backUpDir.absolutePath
                 def modules = [:]
                 project.rootProject.allprojects.each { pro ->
                     //modules.add("exploded-aar" + File.separator + pro.group + File.separator + pro.name + File.separator)
@@ -69,34 +71,38 @@ public class NetMonitorPlugin implements Plugin<Project> {
                 def backupMap = [:]
                 def httpProcessor = "httpProcessorDex${variant.name.capitalize()}"
                 def excludeHackClasses = []
+                //每次执行，先清除之前的备份
+                FileUtils.deleteDirectory(backUpDir)
                 project.task(httpProcessor) << {
                     def jarDependencies = []
-                    classesProcessTask.inputs.files.files.each { f ->
+                    classesProcessTask.inputs.files.each { f ->
                         if (f.isDirectory()) {
                             f.eachFileRecurse(FileType.FILES) { file ->
-                                backUpClass(backupMap, file as File, backUpDirPath as String, modules.values())
-                                MonitorInjector.inject(excludeHackClasses, file as File, modules.values())
-                                if (file.path.endsWith(".jar")) {
-                                    jarDependencies.add(file.path)
+                                def oneFile = file as File
+                                def path = oneFile.absolutePath
+                                if (MonitorInjector.isExcluded(path)) {
+                                    backUpClass(backupMap, oneFile, backUpDirPath as String, modules.values())
+                                    MonitorInjector.inject(excludeHackClasses, file as File, modules.values())
+                                    if (file.path.endsWith(".jar")) {
+                                        jarDependencies.add(file.path)
+                                    }
                                 }
                             }
                         } else {
-                            backUpClass(backupMap, f as File, backUpDirPath as String, modules.values())
-                            MonitorInjector.inject(excludeHackClasses, f as File, modules.values())
-                            if (f.path.endsWith(".jar")) {
-                                jarDependencies.add(f.path)
+                            def file =f as File
+                            def path = file.absolutePath
+                            if (MonitorInjector.isExcluded(path)) {
+                                backUpClass(backupMap, file, backUpDirPath as String, modules.values())
+                                MonitorInjector.inject(excludeHackClasses, f as File, modules.values())
+                                if (f.path.endsWith(".jar")) {
+                                    jarDependencies.add(f.path)
+                                }
                             }
                         }
                     }
                 }
                 if (classesProcessTask) {
-                    println("--------x")
                     def httpProcessorTask = project.tasks[httpProcessor]
-                    if (httpProcessorTask == null) {
-                        println("httpProcessorTask is null")
-                    } else {
-                        println("httpProcessorTask not null")
-                    }
                     httpProcessorTask.dependsOn classesProcessTask.taskDependencies.getDependencies(classesProcessTask)
                     classesProcessTask.dependsOn httpProcessorTask
                 }
@@ -107,14 +113,15 @@ public class NetMonitorPlugin implements Plugin<Project> {
     private static void backUpClass(def backupMap, File file, String backUpDirPath, def modules) {
         String path = file.absolutePath
         if (!Utils.isEmpty(path)) {
-            if (path.endsWith(".class") || (path.endsWith(".jar") && MonitorInjector.checkInjection(file, modules as Collection))) {
-                File target = new File(backUpDirPath, "${file.name}-${System.currentTimeMillis()}")
+            if (MonitorInjector.checkInjection(file, modules as Collection)) {
+                File target = new File(backUpDirPath, "${file.name}")
                 FileUtils.copyFile(file, target)
                 backupMap[file.absolutePath] = target.absolutePath
                 println "back up ${file.absolutePath} to ${target.absolutePath}"
             }
         }
     }
+
 
     private static int getMinSdkVersion(def mergedFlavor, String manifestPath) {
         if (mergedFlavor.minSdkVersion != null) {
