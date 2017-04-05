@@ -31,7 +31,7 @@ public class ExampleUnitTest {
         try {
             Method method = o.getClass().getDeclaredMethod("add",new Class[]{String.class,String.class});
             if(method != null){
-                method.invoke(o,new String[]{"key1","123456"});
+                method.invoke(o, new Object[]{"key1", "123456"});
             }else{
                 System.out.println("method is null!");
             }

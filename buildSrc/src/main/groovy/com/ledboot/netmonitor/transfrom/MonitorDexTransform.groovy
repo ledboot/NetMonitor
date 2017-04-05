@@ -1,37 +1,38 @@
 package com.ledboot.netmonitor.transfrom
 
 import com.android.SdkConstants
-import com.android.build.api.transform.Context
-import com.android.build.api.transform.DirectoryInput
-import com.android.build.api.transform.JarInput
-import com.android.build.api.transform.SecondaryInput
-import com.android.build.api.transform.Transform
-import com.android.build.api.transform.TransformException
-import com.android.build.api.transform.TransformInput
-import com.android.build.api.transform.TransformInvocation
-import com.android.build.api.transform.TransformOutputProvider
+import com.android.build.api.transform.*
+import com.android.build.gradle.internal.transforms.JarMerger
 import com.android.builder.packaging.ZipEntryFilter
+import com.android.utils.FileUtils
+import com.google.common.base.Joiner
 import com.google.common.io.Files
-import com.ledboot.netmonitor.TransformProxy
-import com.ledboot.netmonitor.inputs.MonitorJar
+import com.ledboot.netmonitor.MonitorVariant
 import groovy.io.FileType
 import javassist.ClassPool
 import javassist.CtMethod
 import org.gradle.api.Project
+
 import java.util.jar.JarFile
-import java.util.jar.JarOutputStream
-import java.util.zip.ZipEntry
 
 /**
  * Created by ouyangxingyu198 on 17/4/1.
  */
 public class MonitorDexTransform extends TransformProxy {
 
-    Project project
+    private Project project
+    private MonitorVariant monitorVariant
+    public static final String MONITOR_INTERMEDIATES = "build/intermediates/monitor_intermediates/"
+    public static final String COMBINED_JAR = "combined.jar"
 
-    MonitorDexTransform(Transform base, Project project) {
+    private static final Joiner PATH_JOINER = Joiner.on(File.separatorChar)
+
+    public static String COMBINED_JAR_PATH = null
+
+    MonitorDexTransform(Transform base, MonitorVariant monitorVariant) {
         super(base)
-        this.project = project;
+        this.project = monitorVariant.project
+        this.monitorVariant = monitorVariant
     }
 
     @Override
@@ -39,15 +40,17 @@ public class MonitorDexTransform extends TransformProxy {
 
         Collection<TransformInput> inputs = transformInvocation.inputs
         Collection<TransformInput> referencedInputs = transformInvocation.referencedInputs
-        TransformOutputProvider outputProvider = transformInvocation.outputProvider;
+        TransformOutputProvider outputProvider = transformInvocation.outputProvider
 
-        def outPath = project.rootDir.absolutePath + File.separator + "output"
-        println("combinePath : ---->" + outPath)
+        File outJarDir = getOutputFile("jar")
+        File outClassDir = getOutputFile("class")
+//        def outPath = project.rootDir.absolutePath + File.separator + "output"
+//        println("combinePath : ---->" + outPath)
 
         //重新编译class文件
         def inputClassNames = getClassNames(inputs)
-        def referencedClassNames = getClassNames(referencedInputs)
-        def allClassNames = merge(inputClassNames, referencedClassNames);
+//        def referencedClassNames = getClassNames(referencedInputs)
+//        def allClassNames = merge(inputClassNames, referencedClassNames)
         // Create and populate the Javassist class pool
         ClassPool classPool = createClassPool(inputs, referencedInputs)
         // Append android.jar to class pool. We don't need the class names of them but only the class in the pool for
@@ -62,44 +65,29 @@ public class MonitorDexTransform extends TransformProxy {
                 CtMethod method = ctClass.getDeclaredMethod("headers");
                 method.insertAfter("com.ledboot.interceptor.HttpInterceptor.injectHeader(\$1);")
             }
-            ctClass.writeFile(getOutputFile(outputProvider).canonicalPath)
+            ctClass.writeFile(outClassDir.canonicalPath)
         }
 
         //合并class文件
-        JarMerger jarMerger = new JarMerger(new File(outPath + File.separator + "combined.jar"))
-        jarMerger .setFilter(new ZipEntryFilter() {
+        File combinedFile = new File(outJarDir, COMBINED_JAR)
+        COMBINED_JAR_PATH = combinedFile.absolutePath
+        JarMerger jarMerger = new JarMerger(combinedFile)
+        jarMerger.setFilter(new ZipEntryFilter() {
             @Override
             public boolean checkEntry(String archivePath) {
                 return archivePath.endsWith(SdkConstants.DOT_CLASS)
             }
         })
-        jarMerger.addFolder(new File(outPath))
+        jarMerger.addFolder(outClassDir)
         jarMerger.close()
 
         //调用基类的transform
         base.transform(new MonitorTransformInvocation(transformInvocation))
+
+        FileUtils.cleanOutputDir(outClassDir)
+        FileUtils.cleanOutputDir(outJarDir)
     }
 
-    /**
-     * 重新打包jar
-     * @param packagePath 将这个目录下的所有文件打包成jar
-     * @param destPath 打包好的jar包的绝对路径
-     */
-    public static void zipJar(String packagePath, String destPath) {
-
-        File file = new File(packagePath)
-        JarOutputStream outputStream = new JarOutputStream(new FileOutputStream(destPath))
-        file.eachFileRecurse { File f ->
-            String entryName = f.getAbsolutePath().substring(packagePath.length() + 1)
-            outputStream.putNextEntry(new ZipEntry(entryName))
-            if (!f.directory) {
-                InputStream inputStream = new FileInputStream(f)
-                outputStream << inputStream
-                inputStream.close()
-            }
-        }
-        outputStream.close()
-    }
 
     private copyResourceFiles(Collection<TransformInput> inputs, TransformOutputProvider outputProvider) {
         inputs.each {
@@ -117,18 +105,14 @@ public class MonitorDexTransform extends TransformProxy {
         }
     }
 
-    private File getOutputFile(TransformOutputProvider outputProvider) {
-//        return outputProvider.getContentLocation(
-//                'main1', getInputTypes(), getScopes(), Format.DIRECTORY)
+    private File getOutputFile(String name) {
 
-        File file = new File(project.rootDir.absolutePath + File.separator + "output")
+        File file = new File(PATH_JOINER.join(project.projectDir, MONITOR_INTERMEDIATES, monitorVariant.variantName, name))
         if (!file.exists()) {
             file.mkdirs()
         }
-        return file;
-//        return outputProvider.getContentLocation(directoryInput.name,
-//                directoryInput.contentTypes, directoryInput.scopes,
-//                Format.DIRECTORY)
+        return file
+
     }
 
     private static Set<String> getClassNames(Collection<TransformInput> inputs) {
@@ -228,74 +212,4 @@ public class MonitorDexTransform extends TransformProxy {
         }
     }
 
-    class MonitorTransformInvocation implements TransformInvocation {
-        TransformInvocation base;
-
-        MonitorTransformInvocation(TransformInvocation transformInvocation) {
-            super()
-            base = transformInvocation;
-        }
-
-        @Override
-        Context getContext() {
-            return base.context
-        }
-
-        @Override
-        Collection<TransformInput> getInputs() {
-            Collection<TransformInput> monitorsInput = new HashSet<>();
-            base.inputs.each {
-                monitorsInput.add(new MonitorTransformInput(it))
-            }
-            return monitorsInput;
-        }
-
-        @Override
-        Collection<TransformInput> getReferencedInputs() {
-            return base.referencedInputs
-        }
-
-        @Override
-        Collection<SecondaryInput> getSecondaryInputs() {
-            return base.secondaryInputs
-        }
-
-        @Override
-        TransformOutputProvider getOutputProvider() {
-            return base.outputProvider
-        }
-
-        @Override
-        boolean isIncremental() {
-            return base.incremental
-        }
-    }
-
-    class MonitorTransformInput implements TransformInput {
-        TransformInput base;
-
-        MonitorTransformInput(TransformInput input) {
-            super()
-            base = input
-        }
-
-        @Override
-        Collection<JarInput> getJarInputs() {
-            Collection<JarInput> jarInputs = new HashSet<>()
-            base.jarInputs.each {
-                println("jarInput filePath : ---> "+it.file.absolutePath)
-                if (jarInputs.size() == 0) {
-                    def jarPath = project.rootDir.absolutePath + File.separator + "output" + File.separator + "combined.jar";
-                    MonitorJar jar = new MonitorJar(it, jarPath)
-                    jarInputs.add(jar)
-                }
-            }
-            return jarInputs
-        }
-
-        @Override
-        Collection<DirectoryInput> getDirectoryInputs() {
-            return new HashSet<DirectoryInput>()
-        }
-    }
 }

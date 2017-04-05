@@ -1,10 +1,10 @@
-package com.ledboot.netmonitor
+package com.ledboot.netmonitor.util
 
 import groovy.json.JsonSlurper
 import org.gradle.api.Project
 
 
-class Utils {
+public class Utils {
 
     public static String getRelativePath(File root, File target) {
         String path = target.absolutePath.replace(root.absolutePath, "")

@@ -1,4 +1,4 @@
-package com.ledboot.netmonitor;
+package com.ledboot.netmonitor.util;
 
 class Parser {
 
