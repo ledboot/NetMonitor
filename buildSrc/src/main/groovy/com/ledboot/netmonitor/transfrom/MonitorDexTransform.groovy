@@ -1,128 +1,61 @@
-package com.ledboot.netmonitor
+package com.ledboot.netmonitor.transfrom
 
 import com.android.SdkConstants
-
-import com.android.build.api.transform.*
-import com.google.common.collect.ImmutableSet
-import com.google.common.collect.Sets
+import com.android.build.api.transform.Context
+import com.android.build.api.transform.DirectoryInput
+import com.android.build.api.transform.JarInput
+import com.android.build.api.transform.SecondaryInput
+import com.android.build.api.transform.Transform
+import com.android.build.api.transform.TransformException
+import com.android.build.api.transform.TransformInput
+import com.android.build.api.transform.TransformInvocation
+import com.android.build.api.transform.TransformOutputProvider
+import com.android.builder.packaging.ZipEntryFilter
+import com.google.common.io.Files
+import com.ledboot.netmonitor.TransformProxy
+import com.ledboot.netmonitor.inputs.MonitorJar
+import groovy.io.FileType
 import javassist.ClassPool
 import javassist.CtMethod
 import org.gradle.api.Project
-import groovy.io.FileType
-import com.google.common.io.Files
-
 import java.util.jar.JarFile
-import org.apache.commons.codec.digest.DigestUtils
-import org.apache.commons.io.FileUtils
-
-import static com.android.build.api.transform.QualifiedContent.*
+import java.util.jar.JarOutputStream
+import java.util.zip.ZipEntry
 
 /**
- * Created by ouyangxingyu198 on 17/3/27.
+ * Created by ouyangxingyu198 on 17/4/1.
  */
+public class MonitorDexTransform extends TransformProxy {
 
-public class MonitorTransformer extends TransformProxy{
+    Project project
 
-    private Project project
-
-    public MonitorTransformer(Transform base,Project project) {
+    MonitorDexTransform(Transform base, Project project) {
         super(base)
-        this.project = project
-        println("MonitorTransformer------")
+        this.project = project;
     }
 
-//    @Override
-//    String getName() {
-//        return "MonitorTransformer"
-//    }
-//    // 指定输入的类型，通过这里的设定，可以指定我们要处理的文件类型
-//    //这样确保其他类型的文件不会传入
-//    @Override
-//    Set<ContentType> getInputTypes() {
-//        return ImmutableSet.<ContentType> of(DefaultContentType.CLASSES)
-//    }
-//    // 指定Transform的作用范围
-//    @Override
-//    Set<Scope> getScopes() {
-//        return Sets.immutableEnumSet(Scope.PROJECT, Scope.EXTERNAL_LIBRARIES, Scope.SUB_PROJECTS)
-//    }
-//
-//    @Override
-//    Set<Scope> getReferencedScopes() {
-//        return ImmutableSet.<QualifiedContent.Scope> of(QualifiedContent.Scope.PROJECT
-//                , QualifiedContent.Scope.PROJECT_LOCAL_DEPS
-//                , QualifiedContent.Scope.EXTERNAL_LIBRARIES
-//                , QualifiedContent.Scope.SUB_PROJECTS
-//                , QualifiedContent.Scope.SUB_PROJECTS_LOCAL_DEPS)
-//    }
-//
-//    @Override
-//    boolean isIncremental() {
-//        return false
-//    }
-
-    /*@Override
-    void transform(Context context, Collection<TransformInput> inputs, Collection<TransformInput> referencedInputs, TransformOutputProvider outputProvider, boolean isIncremental) throws IOException, TransformException, InterruptedException {
-        println("---------transform---------->")
-        inputs.each { input ->
-            //对类型为“文件夹”的input进行遍历
-            input.directoryInputs.each { DirectoryInput directoryInput ->
-                //文件夹里面包含的是我们手写的类以及R.class、BuildConfig.class以及R$XXX.class等+
-                HttpInjecter.injectDir(directoryInput.file.absolutePath, "com"+File.separator+"ledboot"+File.separator+"netmonitor")
-
-                println("directoryInput.file.absolutePath : " + directoryInput.file.absolutePath)
-
-                // 获取output目录
-                def dest = outputProvider.getContentLocation(directoryInput.name,
-                        directoryInput.contentTypes, directoryInput.scopes,
-                        Format.DIRECTORY)
-                println("class dest path : " + dest)
-                // 将input的目录复制到output指定目录
-                FileUtils.copyDirectory(directoryInput.file, dest)
-            }
-            //对类型为jar文件的input进行遍历
-             input.jarInputs.each { JarInput jarInput ->
-                println("--------jarInputs--------")
-                //jar文件一般是第三方依赖库jar文件
-
-                // 重命名输出文件（同目录copyFile会冲突）
-                def jarName = jarInput.name
-                def md5Name = DigestUtils.md5Hex(jarInput.file.getAbsolutePath())
-                if (jarName.endsWith(".jar")) {
-                    jarName = jarName.substring(0, jarName.length() - 4)
-                }
-                //生成输出路径
-                def dest = outputProvider.getContentLocation(jarName + md5Name,
-                        jarInput.contentTypes, jarInput.scopes, Format.JAR)
-                println("jar dest path : " + dest)
-                //将输入内容复制到输出
-                FileUtils.copyFile(jarInput.file, dest)
-            }
-        }
-    }*/
-
     @Override
-    void transform(TransformInvocation transformInvocation) throws TransformException, InterruptedException, IOException {
-        // Find all the class names
-        println("---------transform---------->")
+    void transform(TransformInvocation transformInvocation) throws TransformException, IOException, InterruptedException {
+
         Collection<TransformInput> inputs = transformInvocation.inputs
         Collection<TransformInput> referencedInputs = transformInvocation.referencedInputs
         TransformOutputProvider outputProvider = transformInvocation.outputProvider;
 
-        def inputClassNames = getClassNames(inputs)
+        def outPath = project.rootDir.absolutePath + File.separator + "output"
+        println("combinePath : ---->" + outPath)
 
+        //重新编译class文件
+        def inputClassNames = getClassNames(inputs)
         def referencedClassNames = getClassNames(referencedInputs)
         def allClassNames = merge(inputClassNames, referencedClassNames);
-
         // Create and populate the Javassist class pool
         ClassPool classPool = createClassPool(inputs, referencedInputs)
         // Append android.jar to class pool. We don't need the class names of them but only the class in the pool for
         // javassist. See https://github.com/realm/realm-java/issues/2703.
         addBootClassesToClassPool(classPool)
-
         inputClassNames.each {
             def ctClass = classPool.getCtClass(it)
-            if (it.equals("com.ledboot.netmonitor.MonitorJar")) {
+            if (it.equals("com.ledboot.netmonitor.Test")) {
                 CtMethod method = ctClass.getDeclaredMethod("addHead");
                 method.insertAfter("com.ledboot.interceptor.HttpInterceptor.injectHeader(\$1);")
             } else if (it.equals("okhttp3.Request\$Builder")) {
@@ -131,8 +64,41 @@ public class MonitorTransformer extends TransformProxy{
             }
             ctClass.writeFile(getOutputFile(outputProvider).canonicalPath)
         }
-        copyResourceFiles(inputs, outputProvider)
 
+        //合并class文件
+        JarMerger jarMerger = new JarMerger(new File(outPath + File.separator + "combined.jar"))
+        jarMerger .setFilter(new ZipEntryFilter() {
+            @Override
+            public boolean checkEntry(String archivePath) {
+                return archivePath.endsWith(SdkConstants.DOT_CLASS)
+            }
+        })
+        jarMerger.addFolder(new File(outPath))
+        jarMerger.close()
+
+        //调用基类的transform
+        base.transform(new MonitorTransformInvocation(transformInvocation))
+    }
+
+    /**
+     * 重新打包jar
+     * @param packagePath 将这个目录下的所有文件打包成jar
+     * @param destPath 打包好的jar包的绝对路径
+     */
+    public static void zipJar(String packagePath, String destPath) {
+
+        File file = new File(packagePath)
+        JarOutputStream outputStream = new JarOutputStream(new FileOutputStream(destPath))
+        file.eachFileRecurse { File f ->
+            String entryName = f.getAbsolutePath().substring(packagePath.length() + 1)
+            outputStream.putNextEntry(new ZipEntry(entryName))
+            if (!f.directory) {
+                InputStream inputStream = new FileInputStream(f)
+                outputStream << inputStream
+                inputStream.close()
+            }
+        }
+        outputStream.close()
     }
 
     private copyResourceFiles(Collection<TransformInput> inputs, TransformOutputProvider outputProvider) {
@@ -152,8 +118,14 @@ public class MonitorTransformer extends TransformProxy{
     }
 
     private File getOutputFile(TransformOutputProvider outputProvider) {
-        return outputProvider.getContentLocation(
-                'main', getInputTypes(), getScopes(), Format.DIRECTORY)
+//        return outputProvider.getContentLocation(
+//                'main1', getInputTypes(), getScopes(), Format.DIRECTORY)
+
+        File file = new File(project.rootDir.absolutePath + File.separator + "output")
+        if (!file.exists()) {
+            file.mkdirs()
+        }
+        return file;
 //        return outputProvider.getContentLocation(directoryInput.name,
 //                directoryInput.contentTypes, directoryInput.scopes,
 //                Format.DIRECTORY)
@@ -161,11 +133,10 @@ public class MonitorTransformer extends TransformProxy{
 
     private static Set<String> getClassNames(Collection<TransformInput> inputs) {
         Set<String> classNames = new HashSet<String>()
-        Map<String,Set<String>> map = new HashMap<String,Set<String>>();
-         inputs.each {
+        inputs.each {
             it.directoryInputs.each {
                 def dirPath = it.file.absolutePath
-                println("dirPath:----->"+dirPath)
+                println("dirPath:----->" + dirPath)
                 it.file.eachFileRecurse(FileType.FILES) {
                     if (it.absolutePath.endsWith(SdkConstants.DOT_CLASS)) {
                         def className =
@@ -173,7 +144,7 @@ public class MonitorTransformer extends TransformProxy{
                                         dirPath.length() + 1,
                                         it.absolutePath.length() - SdkConstants.DOT_CLASS.length()
                                 ).replace(File.separatorChar, '.' as char)
-                        println("class name: ----> "+className)
+                        println("class name: ----> " + className)
                         classNames.add(className)
                     }
                 }
@@ -181,7 +152,7 @@ public class MonitorTransformer extends TransformProxy{
 
             it.jarInputs.each {
                 def jarFile = new JarFile(it.file)
-                println("jarFile:---->"+it.file.absolutePath)
+                println("jarFile:---->" + it.file.absolutePath)
                 jarFile.entries().findAll {
                     !it.directory && it.name.endsWith(SdkConstants.DOT_CLASS)
                 }.each {
@@ -241,7 +212,6 @@ public class MonitorTransformer extends TransformProxy{
         merged.addAll(set2)
         return merged;
     }
-
     // There is no official way to get the path to android.jar for transform.
     // See https://code.google.com/p/android/issues/detail?id=209426
     private void addBootClassesToClassPool(ClassPool classPool) {
@@ -255,6 +225,77 @@ public class MonitorTransformer extends TransformProxy{
             // Just log it. It might not impact the transforming if the method which needs to be transformer doesn't
             // contain classes from android.jar.
             println("Cannot get bootClasspath caused by:", e)
+        }
+    }
+
+    class MonitorTransformInvocation implements TransformInvocation {
+        TransformInvocation base;
+
+        MonitorTransformInvocation(TransformInvocation transformInvocation) {
+            super()
+            base = transformInvocation;
+        }
+
+        @Override
+        Context getContext() {
+            return base.context
+        }
+
+        @Override
+        Collection<TransformInput> getInputs() {
+            Collection<TransformInput> monitorsInput = new HashSet<>();
+            base.inputs.each {
+                monitorsInput.add(new MonitorTransformInput(it))
+            }
+            return monitorsInput;
+        }
+
+        @Override
+        Collection<TransformInput> getReferencedInputs() {
+            return base.referencedInputs
+        }
+
+        @Override
+        Collection<SecondaryInput> getSecondaryInputs() {
+            return base.secondaryInputs
+        }
+
+        @Override
+        TransformOutputProvider getOutputProvider() {
+            return base.outputProvider
+        }
+
+        @Override
+        boolean isIncremental() {
+            return base.incremental
+        }
+    }
+
+    class MonitorTransformInput implements TransformInput {
+        TransformInput base;
+
+        MonitorTransformInput(TransformInput input) {
+            super()
+            base = input
+        }
+
+        @Override
+        Collection<JarInput> getJarInputs() {
+            Collection<JarInput> jarInputs = new HashSet<>()
+            base.jarInputs.each {
+                println("jarInput filePath : ---> "+it.file.absolutePath)
+                if (jarInputs.size() == 0) {
+                    def jarPath = project.rootDir.absolutePath + File.separator + "output" + File.separator + "combined.jar";
+                    MonitorJar jar = new MonitorJar(it, jarPath)
+                    jarInputs.add(jar)
+                }
+            }
+            return jarInputs
+        }
+
+        @Override
+        Collection<DirectoryInput> getDirectoryInputs() {
+            return new HashSet<DirectoryInput>()
         }
     }
 }

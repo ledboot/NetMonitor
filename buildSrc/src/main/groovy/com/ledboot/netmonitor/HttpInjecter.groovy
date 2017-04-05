@@ -24,7 +24,7 @@ public class HttpInjecter {
                         && !filePath.contains("BuildConfig.class")) {
                     // 判断当前目录是否是在我们的应用包里面
                     println("injectDir :----->" +filePath)
-                    int index = filePath.indexOf(packageName+File.separator+"Test");
+                    int index = filePath.indexOf(packageName+File.separator+"MonitorJar");
                     boolean isMyPackage = index != -1;
                     if (isMyPackage) {
                         println("isMyPackage :----->" +isMyPackage)
@@ -47,11 +47,11 @@ public class HttpInjecter {
 //                            cts[0].insertBeforeBody(injectStr)
 //                        }
                         println("-------statrt-------")
-                        CtMethod method = c.getDeclaredMethod("addHead");
+                        CtMethod method = c.getDeclaredMethod("add");
                         println("-------statrt---1----")
                         CtClass ctClass = pool.getCtClass("com.ledboot.interceptor.HttpInterceptor")
                         println(ctClass.getDeclaredMethod("injectHeader").getName()+"-----------")
-                        method.insertAfter(ctClass.getName()+".injectHeader(\$1);")
+                        method.insertAfter(ctClass.getName()+".addMap(null);")
                         println("-------statrt---2----")
                         c.writeFile(path)
                         c.detach()

@@ -1,9 +1,17 @@
 package com.ledboot.netmonitor
 
-import groovy.io.FileType
+import com.android.build.api.transform.Transform
+import com.android.build.gradle.internal.pipeline.TransformTask
+import com.android.build.gradle.internal.transforms.DexTransform
+import com.ledboot.netmonitor.transfrom.MonitorDexTransform
 import org.apache.commons.io.FileUtils
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.Task
+import org.gradle.api.execution.TaskExecutionGraph
+import org.gradle.api.execution.TaskExecutionGraphListener
+
+import java.lang.reflect.Field
 
 public class NetMonitorPlugin implements Plugin<Project> {
 
@@ -11,7 +19,50 @@ public class NetMonitorPlugin implements Plugin<Project> {
         System.out.println("========================");
         System.out.println("这是第二个插件!");
         System.out.println("========================");
-        project.android.registerTransform(new MonitorTransformer(project))
+        //删除缓存的文件夹
+        def outPath = project.rootDir.absolutePath + File.separator + "output"
+        println("combinePath : ---->" + outPath)
+        deleteDir(new File(outPath))
+        project.afterEvaluate {
+            println "project.afterEvaluate"
+            project.android.applicationVariants.each { variant ->
+                println("variant : ---->" + variant.name.capitalize())
+                //监听所有的任务
+                project.getGradle().getTaskGraph().addTaskExecutionGraphListener(new TaskExecutionGraphListener() {
+                    @Override
+                    public void graphPopulated(TaskExecutionGraph taskGraph) {
+                        for (Task task : taskGraph.getAllTasks()) {
+                            if (task.getProject().equals(project)
+                                    && task instanceof TransformTask
+                                    && task.name.toLowerCase().contains(variant.name.toLowerCase())) {
+                                Transform transform = ((TransformTask) task).getTransform()
+                                println("task : ---->" + transform.name)
+                                //如果开启了multiDexEnabled true,存在transformClassesWithJarMergingFor${variantName}任务
+//                                if ((((transform instanceof JarMergingTransform)) && !(transform instanceof MonitorTransformer))) {
+//                                    println("==fastdex find jarmerging transform. transform class: " + task.transform.getClass() + " . task name: " + task.name)
+//                                    MonitorTransformer jarMergingTransform = new MonitorTransformer(transform,project)
+//                                    Field field = getFieldByName(task.getClass(),'transform')
+//                                    field.setAccessible(true)
+//                                    field.set(task,jarMergingTransform)
+//                                }
+
+                                if ((((transform instanceof DexTransform)) && !(transform instanceof MonitorDexTransform))) {
+                                    project.logger.error("==fastdex find dex transform. transform class: " + task.transform.getClass() + " . task name: " + task.name)
+                                    //代理DexTransform,实现自定义的转换
+                                    MonitorDexTransform fastdexTransform = new MonitorDexTransform(transform,project)
+                                    Field field = getFieldByName(task.getClass(),'transform')
+                                    field.setAccessible(true)
+                                    field.set(task,fastdexTransform)
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+
+        }
+        //project.android.registerTransform(new MonitorTransformer(project))
 //        project.afterEvaluate {
 //            println "project.afterEvaluate"
 //            project.android.applicationVariants.each { variant ->
@@ -111,6 +162,19 @@ public class NetMonitorPlugin implements Plugin<Project> {
 //        }
     }
 
+    Field getFieldByName(Class<?> aClass, String name) {
+        Class<?> currentClass = aClass;
+        while (currentClass != null) {
+            try {
+                return currentClass.getDeclaredField(name);
+            } catch (NoSuchFieldException e) {
+                // ignored.
+            }
+            currentClass = currentClass.getSuperclass();
+        }
+        return null;
+    }
+
     private static void backUpClass(def backupMap, File file, String backUpDirPath, def modules) {
         String path = file.absolutePath
         if (!Utils.isEmpty(path)) {
@@ -129,6 +193,25 @@ public class NetMonitorPlugin implements Plugin<Project> {
             return mergedFlavor.minSdkVersion.apiLevel
         } else {
             return Parser.getMinSdkVersion(manifestPath)
+        }
+    }
+
+    /**
+     * 删除文件夹
+     * @param dirFile
+     */
+    private void deleteDir(File dirFile) {
+        println("deleteDir path: ---->" + dirFile.absolutePath)
+        if (dirFile.exists()) {
+            File[] files = dirFile.listFiles();
+            if (files != null && files.size() > 0) {
+                for (File f : files) {
+                    deleteDir(f)
+                }
+                dirFile.delete();
+            } else {
+                dirFile.delete();
+            }
         }
     }
 }

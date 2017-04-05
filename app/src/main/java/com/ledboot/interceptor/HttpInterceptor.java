@@ -2,6 +2,8 @@ package com.ledboot.interceptor;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by ouyangxingyu198 on 17/3/28.
@@ -34,5 +36,16 @@ public class HttpInterceptor {
      */
     public static void injectHeader(int a,int b ){
         System.out.println("---injectHeader---"+(a+b));
+    }
+
+    /**
+     * test
+     */
+    public static void addMap(Map map){
+        if(map == null){
+            map = new HashMap();
+        }
+        map.put("a","b");
+        System.out.println("a----b");
     }
 }
