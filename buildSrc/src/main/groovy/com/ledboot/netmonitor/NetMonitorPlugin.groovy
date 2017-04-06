@@ -5,9 +5,11 @@ import com.android.build.gradle.internal.pipeline.TransformTask
 import com.android.build.gradle.internal.transforms.DexTransform
 import com.ledboot.netmonitor.transfrom.MonitorDexTransform
 import com.ledboot.netmonitor.util.Parser
+import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.Task
+import org.gradle.api.UnknownTaskException
 import org.gradle.api.execution.TaskExecutionGraph
 import org.gradle.api.execution.TaskExecutionGraphListener
 
@@ -17,11 +19,24 @@ public class NetMonitorPlugin implements Plugin<Project> {
 
     void apply(Project project) {
         System.out.println("========================");
-        System.out.println("这是第二个插件!");
+        System.out.println("NetMonitorPlugin");
         System.out.println("========================");
         project.afterEvaluate {
             project.android.applicationVariants.each { variant ->
-
+                def variantName = variant.name.capitalize()
+                try {
+                    //与instant run有冲突需要禁掉instant run
+                    def instantRunTask = project.tasks.getByName("transformClassesWithInstantRunFor${variantName}")
+                    if (instantRunTask) {
+                        throw new GradleException(
+                                "NetMonitorPlugin does not support instant run mode, please trigger build"
+                                        + " by assemble${variantName} or disable instant run"
+                                        + " in 'File->Settings...'."
+                        )
+                    }
+                } catch (UnknownTaskException e) {
+                    // Not in instant run mode, continue.
+                }
                 MonitorVariant monitorVariant = new MonitorVariant(project, variant)
                 //监听所有的任务
                 project.getGradle().getTaskGraph().addTaskExecutionGraphListener(new TaskExecutionGraphListener() {
@@ -46,9 +61,9 @@ public class NetMonitorPlugin implements Plugin<Project> {
                                     project.logger.error("==fastdex find dex transform. transform class: " + task.transform.getClass() + " . task name: " + task.name)
                                     //代理DexTransform,实现自定义的转换
                                     MonitorDexTransform fastdexTransform = new MonitorDexTransform(transform, monitorVariant)
-                                    Field field = getFieldByName(task.getClass(),'transform')
+                                    Field field = getFieldByName(task.getClass(), 'transform')
                                     field.setAccessible(true)
-                                    field.set(task,fastdexTransform)
+                                    field.set(task, fastdexTransform)
                                 }
                             }
                         }
