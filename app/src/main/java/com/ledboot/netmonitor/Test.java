@@ -1,5 +1,7 @@
 package com.ledboot.netmonitor;
 
+import com.ledboot.annotation.MonitorTag;
+
 import java.util.Set;
 
 import okhttp3.Headers;
@@ -8,7 +10,7 @@ import okhttp3.Headers;
 /**
  * Created by ouyangxingyu198 on 17/3/28.
  */
-
+@MonitorTag
 public class Test {
 
     public void addHead(Headers.Builder headerBuilder){

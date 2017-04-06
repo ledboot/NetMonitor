@@ -8,9 +8,14 @@ import com.android.utils.FileUtils
 import com.google.common.base.Joiner
 import com.google.common.io.Files
 import com.ledboot.netmonitor.MonitorVariant
+import com.ledboot.netmonitor.inject.InjectController
 import groovy.io.FileType
 import javassist.ClassPool
 import javassist.CtMethod
+import javassist.bytecode.AnnotationsAttribute
+import javassist.bytecode.ClassFile
+import javassist.bytecode.ConstPool
+import javassist.bytecode.annotation.Annotation
 import org.gradle.api.Project
 
 import java.util.jar.JarFile
@@ -58,13 +63,8 @@ public class MonitorDexTransform extends TransformProxy {
         addBootClassesToClassPool(classPool)
         inputClassNames.each {
             def ctClass = classPool.getCtClass(it)
-            if (it.equals("com.ledboot.netmonitor.Test")) {
-                CtMethod method = ctClass.getDeclaredMethod("addHead");
-                method.insertAfter("com.ledboot.interceptor.HttpInterceptor.injectHeader(\$1);")
-            } else if (it.equals("okhttp3.Request\$Builder")) {
-                CtMethod method = ctClass.getDeclaredMethod("headers");
-                method.insertAfter("com.ledboot.interceptor.HttpInterceptor.injectHeader(\$1);")
-            }
+            //注入拦截信息
+            InjectController.inject(it,classPool,ctClass)
             ctClass.writeFile(outClassDir.canonicalPath)
         }
 
