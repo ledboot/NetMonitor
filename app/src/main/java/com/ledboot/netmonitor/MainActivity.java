@@ -2,6 +2,10 @@ package com.ledboot.netmonitor;
 
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+
+
+import com.ledboot.core.NetMonitor;
+
 import java.util.Set;
 
 import okhttp3.Headers;
@@ -17,6 +21,8 @@ public class MainActivity extends AppCompatActivity {
         Headers.Builder builder = new Headers.Builder();
         builder.add("a","a");
         builder.add("b","b");
+        NetMonitor.init(this);
+        NetMonitor.put("1234","asdgasdgasdg");
         test.addHead(builder);
         Headers headers = builder.build();
         Set<String> names = headers.names();

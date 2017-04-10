@@ -17,6 +17,8 @@ class TestInjectStrategy implements InjectStrategy {
         //获取注解信息
         println(TestInjectStrategy.class.name + "-----inject-------")
         CtMethod method = ctClass.getDeclaredMethod("addHead")
-        method.insertAfter("com.ledboot.interceptor.HttpInterceptor.injectHeader(\$1);")
+        method.insertAfter(
+                "com.ledboot.core.interceptor.INetInterceptor okHttpInterceptor = new com.ledboot.core.interceptor.OkHttpInterceptor();\n" +
+                "okHttpInterceptor.interceptorRequestHead(\$1);")
     }
 }

@@ -1,4 +1,4 @@
-package com.ledboot.annotation;
+package com.ledboot.core.annotation;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
