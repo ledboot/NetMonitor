@@ -1,4 +1,4 @@
-package com.ledboot.netmonitor.util
+package com.ledboot.gradle.util
 
 import groovy.json.JsonSlurper
 import org.gradle.api.Project

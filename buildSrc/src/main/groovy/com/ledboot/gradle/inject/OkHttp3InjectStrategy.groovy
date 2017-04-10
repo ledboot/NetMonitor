@@ -1,4 +1,4 @@
-package com.ledboot.netmonitor.inject
+package com.ledboot.gradle.inject
 
 import javassist.ClassPool
 import javassist.CtClass

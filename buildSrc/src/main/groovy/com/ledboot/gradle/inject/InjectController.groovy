@@ -1,7 +1,7 @@
-package com.ledboot.netmonitor.inject
+package com.ledboot.gradle.inject
 
-import javassist.ClassPool;
-import javassist.CtClass;
+import javassist.ClassPool
+import javassist.CtClass
 
 /**
  * Created by ouyangxingyu198 on 17/4/6.

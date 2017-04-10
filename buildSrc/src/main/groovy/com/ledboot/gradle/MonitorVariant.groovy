@@ -1,4 +1,4 @@
-package com.ledboot.netmonitor
+package com.ledboot.gradle
 
 import org.gradle.api.Project
 

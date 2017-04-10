@@ -1,6 +1,7 @@
-package com.ledboot.core.interceptor;
+package com.ledboot.interceptor;
 
-import com.ledboot.core.NetMonitor;
+import com.ledboot.NetMonitor;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Map;

@@ -1,7 +1,7 @@
 package com.ledboot.netmonitor;
 
 
-import com.ledboot.core.annotation.MonitorTag;
+import com.ledboot.annotation.MonitorTag;
 
 import java.util.Set;
 

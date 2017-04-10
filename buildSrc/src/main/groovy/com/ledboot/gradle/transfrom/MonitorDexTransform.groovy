@@ -1,4 +1,4 @@
-package com.ledboot.netmonitor.transfrom
+package com.ledboot.gradle.transfrom
 
 import com.android.SdkConstants
 import com.android.build.api.transform.*
@@ -7,15 +7,10 @@ import com.android.builder.packaging.ZipEntryFilter
 import com.android.utils.FileUtils
 import com.google.common.base.Joiner
 import com.google.common.io.Files
-import com.ledboot.netmonitor.MonitorVariant
-import com.ledboot.netmonitor.inject.InjectController
+import com.ledboot.gradle.MonitorVariant
+import com.ledboot.gradle.inject.InjectController
 import groovy.io.FileType
 import javassist.ClassPool
-import javassist.CtMethod
-import javassist.bytecode.AnnotationsAttribute
-import javassist.bytecode.ClassFile
-import javassist.bytecode.ConstPool
-import javassist.bytecode.annotation.Annotation
 import org.gradle.api.Project
 
 import java.util.jar.JarFile

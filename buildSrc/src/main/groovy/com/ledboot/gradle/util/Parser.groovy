@@ -1,4 +1,4 @@
-package com.ledboot.netmonitor.util;
+package com.ledboot.gradle.util;
 
 class Parser {
 

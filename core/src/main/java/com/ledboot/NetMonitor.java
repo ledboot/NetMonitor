@@ -1,4 +1,4 @@
-package com.ledboot.core;
+package com.ledboot;
 
 import android.app.Application;
 import android.content.Context;

@@ -1,4 +1,4 @@
-package com.ledboot.netmonitor.inputs
+package com.ledboot.gradle.inputs
 
 import com.android.build.api.transform.JarInput
 import com.android.build.api.transform.QualifiedContent

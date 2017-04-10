@@ -1,4 +1,4 @@
-package com.ledboot.core.interceptor;
+package com.ledboot.interceptor;
 
 /**
  * Created by ouyangxingyu198 on 17/4/10.
