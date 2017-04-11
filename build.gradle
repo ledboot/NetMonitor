@@ -6,7 +6,6 @@ buildscript {
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:2.2.3'
-
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
     }
@@ -16,7 +15,20 @@ allprojects {
     repositories {
         jcenter()
     }
+
+    tasks.withType(Javadoc).all {
+        options.setEncoding('UTF-8')
+    }
 }
+
+def props = new Properties()
+props.load(new FileInputStream("${rootDir}/local.properties"))
+props.each { key, val ->
+    println("key=" + key + ", val=" + val)
+    project.ext.set(key, val)
+}
+
+
 
 task clean(type: Delete) {
     delete rootProject.buildDir

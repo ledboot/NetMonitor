@@ -48,3 +48,4 @@ captures/
 /.idea/
 /buildSrc/build/
 /buildSrc/.gradle/
+/gradle/

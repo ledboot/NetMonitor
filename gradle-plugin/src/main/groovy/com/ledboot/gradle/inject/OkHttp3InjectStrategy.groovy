@@ -6,7 +6,7 @@ import javassist.CtMethod
 import javassist.bytecode.AnnotationsAttribute
 import javassist.bytecode.ClassFile
 import javassist.bytecode.ConstPool
-import javassist.bytecode.annotation.Annotation;
+import javassist.bytecode.annotation.Annotation
 
 /**
  * Created by ouyangxingyu198 on 17/4/6.

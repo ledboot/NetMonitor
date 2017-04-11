@@ -1,1 +1,2 @@
-include ':app', ':buildSrc', ':core'
+include ':app'
+include ':core'

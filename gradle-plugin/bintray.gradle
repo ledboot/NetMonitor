@@ -1,0 +1,95 @@
+apply plugin: 'com.github.dcendents.android-maven'
+apply plugin: 'com.jfrog.bintray'
+
+
+group GROUP
+version = POM_VERSION
+
+def props = new Properties()
+props.load(new FileInputStream("${rootDir}/../local.properties"))
+
+
+def bintray_user = props.getProperty("bintrayUser", "")
+def bintray_key = props.getProperty("bintrayKey", "")
+
+repositories {
+    jcenter()
+    mavenCentral()
+}
+
+task sourcesJar(type: Jar) {
+    from sourceSets.main.allGroovy
+    classifier = 'sources'
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    from javadoc.destinationDir
+    classifier = 'javadoc'
+}
+
+artifacts {
+    archives javadocJar
+    archives sourcesJar
+}
+
+install {
+    repositories.mavenInstaller {
+
+        pom.project {
+            // Description
+            name POM_NAME
+            description POM_DESCRIPTION
+            url POM_URL
+            version POM_VERSION
+            // Archive
+            packaging 'jar'
+            groupId GROUP
+            artifactId POM_ARTIFACT_ID
+            inceptionYear '2017'
+            // License
+            licenses {
+                license {
+                    name POM_LICENCE_NAME
+                    url POM_LICENCE_URL
+                    distribution 'repo'
+                }
+            }
+
+            developers {
+                developer {
+                    name bintray_user
+                }
+            }
+            scm {
+                connection POM_SCM_URL
+                developerConnection POM_SCM_URL
+                url POM_URL
+            }
+        }
+
+    }
+}
+
+
+
+bintray {
+    user = bintray_user
+    key = bintray_key
+    configurations = ['archives']
+    pkg {
+        repo = "maven"
+        name = "${GROUP}:${POM_ARTIFACT_ID}"
+        licenses = BINTRAY_LICENCE
+        vcsUrl = POM_SCM_URL
+        websiteUrl = POM_URL
+        issueTrackerUrl = POM_ISSUE_URL
+        labels = ['android', 'plugin', 'gradle', 'monitor']
+        publicDownloadNumbers = true
+        publish = true
+        version {
+            name = POM_VERSION
+            desc = POM_DESCRIPTION
+            vcsTag = POM_VERSION
+        }
+    }
+}
