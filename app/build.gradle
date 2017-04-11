@@ -23,6 +23,10 @@ android {
     }
 
 }
+repositories {
+    mavenCentral()
+    jcenter()
+}
 
 dependencies {
     compile fileTree(include: ['*.jar'], dir: 'libs')
@@ -32,5 +36,5 @@ dependencies {
     androidTestCompile 'com.android.support.test:rules:0.4.1'
     compile 'com.android.support:appcompat-v7:24.0.0'
     compile 'com.squareup.okhttp3:okhttp:3.6.0'
-    compile project(':core')
+    compile 'com.ledboot.monitor:monitor:1.0.0'
 }

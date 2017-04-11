@@ -1,8 +1,5 @@
 package com.ledboot;
 
-import android.app.Application;
-import android.content.Context;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -12,20 +9,17 @@ import java.util.Map;
 
 public class NetMonitor {
 
-    private static Context mContext;
+//    private static Context mContext;
 
     public static Map<String,String> cacheMap = new HashMap<>();
 
-    /**
-     * 初始化Netmonitor
-     * @param context
-     */
-    public static void init(Context context){
+
+    /*public static void init(Context context){
         mContext = context;
         if(!(context instanceof Application)){
             mContext = context.getApplicationContext();
         }
-    }
+    }*/
 
     /**
      * 设置头部参数
