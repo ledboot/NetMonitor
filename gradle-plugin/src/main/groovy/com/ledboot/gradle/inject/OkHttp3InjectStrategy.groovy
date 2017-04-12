@@ -2,6 +2,7 @@ package com.ledboot.gradle.inject
 
 import javassist.ClassPool
 import javassist.CtClass
+import javassist.CtConstructor
 import javassist.CtMethod
 import javassist.bytecode.AnnotationsAttribute
 import javassist.bytecode.ClassFile
@@ -34,6 +35,10 @@ public class OkHttp3InjectStrategy implements InjectStrategy {
             CtMethod method = ctClass.getDeclaredMethod("headers")
             method.insertAfter(
                     "com.ledboot.interceptor.INetInterceptor okHttpInterceptor = new com.ledboot.interceptor.OkHttpInterceptor();\n" +
+                    "okHttpInterceptor.interceptorRequestHead(this.headers);")
+
+            CtConstructor constructor = ctClass.getDeclaredConstructor(null);
+            constructor.insertAfter("com.ledboot.interceptor.INetInterceptor okHttpInterceptor = new com.ledboot.interceptor.OkHttpInterceptor();\n" +
                     "okHttpInterceptor.interceptorRequestHead(this.headers);")
         }
     }
