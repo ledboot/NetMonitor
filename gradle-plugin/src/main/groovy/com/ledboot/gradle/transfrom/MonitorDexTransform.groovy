@@ -1,18 +1,17 @@
 package com.ledboot.gradle.transfrom
 
 import com.android.SdkConstants
+import com.android.build.api.transform.*
 import com.android.build.gradle.internal.transforms.JarMerger
 import com.android.builder.packaging.ZipEntryFilter
 import com.android.utils.FileUtils
-import com.google.common.base.Joiner
 import com.google.common.io.Files
 import com.ledboot.gradle.MonitorVariant
 import com.ledboot.gradle.inject.InjectController
+import com.ledboot.gradle.util.Utils
 import groovy.io.FileType
 import javassist.ClassPool
 import org.gradle.api.Project
-
-import java.util.jar.JarFile
 
 /**
  * Created by ouyangxingyu198 on 17/4/1.
@@ -21,10 +20,8 @@ public class MonitorDexTransform extends TransformProxy {
 
     private Project project
     private MonitorVariant monitorVariant
-    public static final String MONITOR_INTERMEDIATES = "build/intermediates/monitor_intermediates/"
     public static final String COMBINED_JAR = "combined.jar"
 
-    private static final Joiner PATH_JOINER = Joiner.on(File.separatorChar)
 
     public static String COMBINED_JAR_PATH = null
 
@@ -41,20 +38,20 @@ public class MonitorDexTransform extends TransformProxy {
         Collection<TransformInput> referencedInputs = transformInvocation.referencedInputs
         TransformOutputProvider outputProvider = transformInvocation.outputProvider
 
-        File outJarDir = getOutputFile("jar")
-        File outClassDir = getOutputFile("class")
+        File outJarDir = Utils.getOutputFile(monitorVariant, "jar")
+        File outClassDir = Utils.getOutputFile(monitorVariant, "class")
 //        def outPath = project.rootDir.absolutePath + File.separator + "output"
 //        println("combinePath : ---->" + outPath)
 
         //重新编译class文件
         def inputClassNames = getClassNames(inputs)
-//        def referencedClassNames = getClassNames(referencedInputs)
+//        def referencedClassNames = Utils.getClassNames(referencedInputs)
 //        def allClassNames = merge(inputClassNames, referencedClassNames)
         // Create and populate the Javassist class pool
-        ClassPool classPool = createClassPool(inputs, referencedInputs)
+        ClassPool classPool = Utils.createClassPool(inputs, referencedInputs)
         // Append android.jar to class pool. We don't need the class names of them but only the class in the pool for
         // javassist. See https://github.com/realm/realm-java/issues/2703.
-        addBootClassesToClassPool(classPool)
+        Utils.addBootClassesToClassPool(project, classPool)
         inputClassNames.each {
             def ctClass = classPool.getCtClass(it)
             //注入拦截信息
@@ -99,87 +96,6 @@ public class MonitorDexTransform extends TransformProxy {
         }
     }
 
-    private File getOutputFile(String name) {
-
-        File file = new File(PATH_JOINER.join(project.projectDir, MONITOR_INTERMEDIATES, monitorVariant.variantName, name))
-        if (!file.exists()) {
-            file.mkdirs()
-        }
-        return file
-
-    }
-
-    private static Set<String> getClassNames(Collection<TransformInput> inputs) {
-        Set<String> classNames = new HashSet<String>()
-        inputs.each {
-            it.directoryInputs.each {
-                def dirPath = it.file.absolutePath
-                it.file.eachFileRecurse(FileType.FILES) {
-                    if (it.absolutePath.endsWith(SdkConstants.DOT_CLASS)) {
-                        def className =
-                                it.absolutePath.substring(
-                                        dirPath.length() + 1,
-                                        it.absolutePath.length() - SdkConstants.DOT_CLASS.length()
-                                ).replace(File.separatorChar, '.' as char)
-                        classNames.add(className)
-                    }
-                }
-            }
-
-            it.jarInputs.each {
-                def jarFile = new JarFile(it.file)
-                jarFile.entries().findAll {
-                    !it.directory && it.name.endsWith(SdkConstants.DOT_CLASS)
-                }.each {
-                    def path = it.name
-                    // The jar might not using File.separatorChar as the path separator. So we just replace both `\` and
-                    // `/`. It depends on how the jar file was created.
-                    // See http://stackoverflow.com/questions/13846000/file-separators-of-path-name-of-zipentry
-                    String className = path.substring(0, path.length() - SdkConstants.DOT_CLASS.length())
-                            .replace('/' as char, '.' as char)
-                            .replace('\\' as char, '.' as char)
-                    classNames.add(className)
-                }
-            }
-        }
-        return classNames
-    }
-
-    /**
-     * Creates and populates the Javassist class pool.
-     *
-     * @param inputs the inputs provided by the Transform API
-     * @param referencedInputs the referencedInputs provided by the Transform API
-     * @return the populated ClassPool instance
-     */
-    private ClassPool createClassPool(Collection<TransformInput> inputs, Collection<TransformInput> referencedInputs) {
-        // Don't use ClassPool.getDefault(). Doing consecutive builds in the same run (e.g. debug+release)
-        // will use a cached object and all the classes will be frozen.
-        ClassPool classPool = new ClassPool(null)
-        classPool.appendSystemPath()
-
-        inputs.each {
-            it.directoryInputs.each {
-                classPool.appendClassPath(it.file.absolutePath)
-            }
-
-            it.jarInputs.each {
-                classPool.appendClassPath(it.file.absolutePath)
-            }
-        }
-
-        referencedInputs.each {
-            it.directoryInputs.each {
-                classPool.appendClassPath(it.file.absolutePath)
-            }
-
-            it.jarInputs.each {
-                classPool.appendClassPath(it.file.absolutePath)
-            }
-        }
-
-        return classPool
-    }
 
     private static Set<String> merge(Set<String> set1, Set<String> set2) {
         Set<String> merged = new HashSet<String>()
@@ -187,18 +103,6 @@ public class MonitorDexTransform extends TransformProxy {
         merged.addAll(set2)
         return merged;
     }
-    // There is no official way to get the path to android.jar for transform.
-    // See https://code.google.com/p/android/issues/detail?id=209426
-    private void addBootClassesToClassPool(ClassPool classPool) {
-        try {
-            project.android.bootClasspath.each {
-                String path = it.absolutePath
-                classPool.appendClassPath(path)
-            }
-        } catch (Exception e) {
-            // Just log it. It might not impact the transforming if the method which needs to be transformer doesn't
-            // contain classes from android.jar.
-        }
-    }
+
 
 }

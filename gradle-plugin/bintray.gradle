@@ -2,12 +2,17 @@ apply plugin: 'com.github.dcendents.android-maven'
 apply plugin: 'com.jfrog.bintray'
 
 
-def POM_VERSION = file("${projectDir}/../version.txt").text.trim()
+def props = new Properties()
+def POM_VERSION = file("${rootDir}/../version.txt").text.trim()
+props.load(new FileInputStream("${rootDir}/../local.properties"))
+
+//def POM_VERSION = file("${rootDir}/version.txt").text.trim()
+//props.load(new FileInputStream("${rootDir}/local.properties"))
+
 group = GROUP
 version = POM_VERSION
 
-def props = new Properties()
-props.load(new FileInputStream("${rootDir}/../local.properties"))
+
 
 
 def bintray_user = props.getProperty("bintrayUser", "")

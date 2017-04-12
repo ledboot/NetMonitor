@@ -3,9 +3,10 @@ package com.ledboot.gradle
 import com.android.build.api.transform.Transform
 import com.android.build.gradle.internal.pipeline.TransformTask
 import com.android.build.gradle.internal.transforms.DexTransform
+import com.android.build.gradle.internal.transforms.JarMergingTransform
 import com.ledboot.gradle.transfrom.MonitorDexTransform
+import com.ledboot.gradle.transfrom.MonitorJarMergingTransform
 import com.ledboot.gradle.util.Parser
-import org.gradle.api.*
 import org.gradle.api.execution.TaskExecutionGraph
 import org.gradle.api.execution.TaskExecutionGraphListener
 
@@ -18,6 +19,9 @@ public class NetMonitorPlugin implements Plugin<Project> {
         project.dependencies.add("compile", "com.ledboot.monitor:monitor:${Version.VERSION}")
         project.afterEvaluate {
             project.android.applicationVariants.each { variant ->
+
+                boolean multiDexEnabled = variant.apkVariantData.variantConfiguration.isMultiDexEnabled()
+
                 def variantName = variant.name.capitalize()
                 try {
                     //与instant run有冲突需要禁掉instant run
@@ -42,14 +46,24 @@ public class NetMonitorPlugin implements Plugin<Project> {
                                     && task instanceof TransformTask
                                     && task.name.toLowerCase().contains(variant.name.toLowerCase())) {
                                 Transform transform = ((TransformTask) task).getTransform()
-                                if ((((transform instanceof DexTransform)) && !(transform instanceof MonitorDexTransform))) {
-                                    project.logger.error("==fastdex find dex transform. transform class: " + task.transform.getClass() + " . task name: " + task.name)
-                                    //代理DexTransform,实现自定义的转换
-                                    MonitorDexTransform fastdexTransform = new MonitorDexTransform(transform, monitorVariant)
-                                    Field field = getFieldByName(task.getClass(), 'transform')
-                                    field.setAccessible(true)
-                                    field.set(task, fastdexTransform)
+                                if (multiDexEnabled) {
+                                    if ((((transform instanceof JarMergingTransform)) && !(transform instanceof MonitorJarMergingTransform))) {
+                                        MonitorJarMergingTransform jarMergingTransform = new MonitorJarMergingTransform(transform, monitorVariant)
+                                        Field field = getFieldByName(task.getClass(), 'transform')
+                                        field.setAccessible(true)
+                                        field.set(task, jarMergingTransform)
+                                    }
+                                } else {
+                                    if ((((transform instanceof DexTransform)) && !(transform instanceof MonitorDexTransform))) {
+                                        //代理DexTransform,实现自定义的转换
+                                        MonitorDexTransform monitorDexTransform = new MonitorDexTransform(transform, monitorVariant)
+                                        Field field = getFieldByName(task.getClass(), 'transform')
+                                        field.setAccessible(true)
+                                        field.set(task, monitorDexTransform)
+                                    }
                                 }
+
+
                             }
                         }
                     }
