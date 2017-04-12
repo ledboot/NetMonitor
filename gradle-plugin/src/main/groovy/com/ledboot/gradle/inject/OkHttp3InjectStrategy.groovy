@@ -32,9 +32,9 @@ public class OkHttp3InjectStrategy implements InjectStrategy {
             cf.setVersionToJava5()
             //方法注入Interceptor
             CtMethod method = ctClass.getDeclaredMethod("headers")
-            method.insertBefore(
+            method.insertAfter(
                     "com.ledboot.interceptor.INetInterceptor okHttpInterceptor = new com.ledboot.interceptor.OkHttpInterceptor();\n" +
-                    "okHttpInterceptor.interceptorRequestHead(\$1);")
+                    "okHttpInterceptor.interceptorRequestHead(this.headers);")
         }
     }
 }

@@ -7,6 +7,11 @@ import com.android.build.gradle.internal.transforms.JarMergingTransform
 import com.ledboot.gradle.transfrom.MonitorDexTransform
 import com.ledboot.gradle.transfrom.MonitorJarMergingTransform
 import com.ledboot.gradle.util.Parser
+import org.gradle.api.GradleException
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.api.Task
+import org.gradle.api.UnknownTaskException
 import org.gradle.api.execution.TaskExecutionGraph
 import org.gradle.api.execution.TaskExecutionGraphListener
 
