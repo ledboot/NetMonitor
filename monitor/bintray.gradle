@@ -2,7 +2,8 @@ apply plugin: 'com.github.dcendents.android-maven'
 apply plugin: 'com.jfrog.bintray'
 
 
-group GROUP
+def POM_VERSION = file("${projectDir}/../version.txt").text.trim()
+group = GROUP
 version = POM_VERSION
 
 def props = new Properties()
@@ -76,6 +77,7 @@ bintray {
     user = bintray_user
     key = bintray_key
     configurations = ['archives']
+    override = true
     pkg {
         repo = "maven"
         name = "${GROUP}:${POM_ARTIFACT_ID}"

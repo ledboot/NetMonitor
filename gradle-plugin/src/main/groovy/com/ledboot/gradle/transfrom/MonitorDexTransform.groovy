@@ -1,7 +1,6 @@
 package com.ledboot.gradle.transfrom
 
 import com.android.SdkConstants
-import com.android.build.api.transform.*
 import com.android.build.gradle.internal.transforms.JarMerger
 import com.android.builder.packaging.ZipEntryFilter
 import com.android.utils.FileUtils
@@ -115,7 +114,6 @@ public class MonitorDexTransform extends TransformProxy {
         inputs.each {
             it.directoryInputs.each {
                 def dirPath = it.file.absolutePath
-                println("dirPath:----->" + dirPath)
                 it.file.eachFileRecurse(FileType.FILES) {
                     if (it.absolutePath.endsWith(SdkConstants.DOT_CLASS)) {
                         def className =
@@ -123,7 +121,6 @@ public class MonitorDexTransform extends TransformProxy {
                                         dirPath.length() + 1,
                                         it.absolutePath.length() - SdkConstants.DOT_CLASS.length()
                                 ).replace(File.separatorChar, '.' as char)
-                        println("class name: ----> " + className)
                         classNames.add(className)
                     }
                 }
@@ -131,7 +128,6 @@ public class MonitorDexTransform extends TransformProxy {
 
             it.jarInputs.each {
                 def jarFile = new JarFile(it.file)
-                println("jarFile:---->" + it.file.absolutePath)
                 jarFile.entries().findAll {
                     !it.directory && it.name.endsWith(SdkConstants.DOT_CLASS)
                 }.each {
@@ -197,13 +193,11 @@ public class MonitorDexTransform extends TransformProxy {
         try {
             project.android.bootClasspath.each {
                 String path = it.absolutePath
-                println "Add boot class " + path + " to class pool."
                 classPool.appendClassPath(path)
             }
         } catch (Exception e) {
             // Just log it. It might not impact the transforming if the method which needs to be transformer doesn't
             // contain classes from android.jar.
-            println("Cannot get bootClasspath caused by:", e)
         }
     }
 

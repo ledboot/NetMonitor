@@ -19,13 +19,11 @@ class MonitorJarInput implements JarInput {
 
     @Override
     Status getStatus() {
-        println("JarInput:base.name -->" + base.status)
         return base.status
     }
 
     @Override
     String getName() {
-        println("JarInput:base.name -->" + base.name)
         return base.name
     }
 

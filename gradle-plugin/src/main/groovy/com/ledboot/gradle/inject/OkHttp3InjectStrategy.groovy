@@ -16,7 +16,7 @@ public class OkHttp3InjectStrategy implements InjectStrategy {
     /**
      * 自定义monitor Annotation
      */
-    private def monitorAnnotation = "com.ledboot.core.annotation.MonitorTag"
+    private def monitorAnnotation = "com.ledboot.annotation.MonitorTag"
 
     @Override
     void inject(ClassPool classPool, CtClass ctClass) {
@@ -33,7 +33,7 @@ public class OkHttp3InjectStrategy implements InjectStrategy {
             //方法注入Interceptor
             CtMethod method = ctClass.getDeclaredMethod("headers")
             method.insertBefore(
-                    "com.ledboot.core.interceptor.INetInterceptor okHttpInterceptor = new com.ledboot.core.interceptor.OkHttpInterceptor();\n" +
+                    "com.ledboot.interceptor.INetInterceptor okHttpInterceptor = new com.ledboot.interceptor.OkHttpInterceptor();\n" +
                     "okHttpInterceptor.interceptorRequestHead(\$1);")
         }
     }

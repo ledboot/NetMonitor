@@ -11,10 +11,9 @@ class TestInjectStrategy implements InjectStrategy {
     @Override
     void inject(ClassPool classPool, CtClass ctClass) {
         //获取注解信息
-        println(TestInjectStrategy.class.name + "-----inject-------")
         CtMethod method = ctClass.getDeclaredMethod("addHead")
         method.insertAfter(
-                "com.ledboot.core.interceptor.INetInterceptor okHttpInterceptor = new com.ledboot.core.interceptor.OkHttpInterceptor();\n" +
+                "com.ledboot.interceptor.INetInterceptor okHttpInterceptor = new com.ledboot.interceptor.OkHttpInterceptor();\n" +
                 "okHttpInterceptor.interceptorRequestHead(\$1);")
     }
 }

@@ -11,7 +11,7 @@ public class NetMonitor {
 
 //    private static Context mContext;
 
-    public static Map<String,String> cacheMap = new HashMap<>();
+    public static Map<String,String> cacheMap = new HashMap<String,String>();
 
 
     /*public static void init(Context context){

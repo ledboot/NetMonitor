@@ -16,7 +16,6 @@ public class MonitorTransformInput implements TransformInput {
     Collection<JarInput> getJarInputs() {
         Collection<JarInput> jarInputs = new HashSet<>()
         base.jarInputs.each {
-            println("jarInput filePath : ---> " + it.file.absolutePath)
             if (jarInputs.size() == 0) {
                 def jarPath = MonitorDexTransform.COMBINED_JAR_PATH
                 MonitorJarInput jar = new MonitorJarInput(it, jarPath)

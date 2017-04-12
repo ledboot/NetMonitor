@@ -14,9 +14,8 @@ import java.lang.reflect.Field
 public class NetMonitorPlugin implements Plugin<Project> {
 
     void apply(Project project) {
-        System.out.println("========================");
-        System.out.println("NetMonitorPlugin");
-        System.out.println("========================");
+        project.repositories.add(project.getRepositories().jcenter())
+        project.dependencies.add("compile", "com.ledboot.monitor:monitor:${Version.VERSION}")
         project.afterEvaluate {
             project.android.applicationVariants.each { variant ->
                 def variantName = variant.name.capitalize()
@@ -43,16 +42,6 @@ public class NetMonitorPlugin implements Plugin<Project> {
                                     && task instanceof TransformTask
                                     && task.name.toLowerCase().contains(variant.name.toLowerCase())) {
                                 Transform transform = ((TransformTask) task).getTransform()
-                                println("task : ---->" + transform.name)
-                                //如果开启了multiDexEnabled true,存在transformClassesWithJarMergingFor${variantName}任务
-//                                if ((((transform instanceof JarMergingTransform)) && !(transform instanceof MonitorTransformer))) {
-//                                    println("==fastdex find jarmerging transform. transform class: " + task.transform.getClass() + " . task name: " + task.name)
-//                                    MonitorTransformer jarMergingTransform = new MonitorTransformer(transform,project)
-//                                    Field field = getFieldByName(task.getClass(),'transform')
-//                                    field.setAccessible(true)
-//                                    field.set(task,jarMergingTransform)
-//                                }
-
                                 if ((((transform instanceof DexTransform)) && !(transform instanceof MonitorDexTransform))) {
                                     project.logger.error("==fastdex find dex transform. transform class: " + task.transform.getClass() + " . task name: " + task.name)
                                     //代理DexTransform,实现自定义的转换

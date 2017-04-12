@@ -2,7 +2,8 @@ apply plugin: 'com.github.dcendents.android-maven'
 apply plugin: 'com.jfrog.bintray'
 
 
-group GROUP
+def POM_VERSION = file("${projectDir}/../version.txt").text.trim()
+group = GROUP
 version = POM_VERSION
 
 def props = new Properties()
@@ -11,6 +12,17 @@ props.load(new FileInputStream("${rootDir}/../local.properties"))
 
 def bintray_user = props.getProperty("bintrayUser", "")
 def bintray_key = props.getProperty("bintrayKey", "")
+
+import org.apache.tools.ant.filters.ReplaceTokens
+
+task generateVersionClass(type: Copy) {
+    from 'src/main/templates/Version.java'
+    into 'build/generated-src/main/java/com/ledboot/gradle'
+    filter(ReplaceTokens, tokens: [version: POM_VERSION])
+    outputs.upToDateWhen { false }
+}
+
+compileJava.dependsOn generateVersionClass
 
 repositories {
     jcenter()
@@ -40,12 +52,12 @@ install {
             name POM_NAME
             description POM_DESCRIPTION
             url POM_URL
-            version POM_VERSION
             // Archive
             packaging 'jar'
             groupId GROUP
             artifactId POM_ARTIFACT_ID
             inceptionYear '2017'
+            version POM_VERSION
             // License
             licenses {
                 license {
@@ -76,6 +88,7 @@ bintray {
     user = bintray_user
     key = bintray_key
     configurations = ['archives']
+    override = true
     pkg {
         repo = "maven"
         name = "${GROUP}:${POM_ARTIFACT_ID}"
